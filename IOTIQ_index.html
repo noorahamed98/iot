@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>🌐 Smart IoT Manager</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div class="container py-4">
+    <h2 class="mb-4">🌐 Smart IoT Manager</h2>
+
+    <!-- Form to create a new Thing -->
+    <form action="/create" method="post" class="mb-3">
+      <div class="input-group">
+        <input type="text" name="thing_name" placeholder="Enter Thing ID" class="form-control" required>
+        <button class="btn btn-success" type="submit">+ Create Thing</button>
+      </div>
+    </form>
+
+    <!-- 📜 View Full History Button -->
+    <div class="mb-3">
+      <a href="/history" class="btn btn-outline-primary">📜 View Full History</a>
+    </div>
+
+    <!-- Last 50 Things List -->
+    <div class="card">
+      <div class="card-header bg-primary text-white">Last 50 Things</div>
+      <ul class="list-group list-group-flush">
+        {% for thing in things %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div>
+            <strong>{{ thing.thing_name }}</strong><br>
+            <small>Created: {{ thing.timestamp }}</small>
+          </div>
+          <div class="d-flex gap-2">
+            <a href="/download/{{ thing.thing_name }}" class="btn btn-sm btn-outline-secondary">📥 Download Certs</a>
+            <form action="/delete/{{ thing.thing_name }}" method="post" onsubmit="return confirm('Are you sure you want to delete {{ thing.thing_name }}?');">
+              <button type="submit" class="btn btn-sm btn-outline-danger">🗑️  Delete</button>
+            </form>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</body>
+</html>
