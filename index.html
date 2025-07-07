@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>IOTIQ | Device Manager</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h2>📜 Device History</h2>
+      <button onclick="loadSidebarHistory()" class="refresh-button">🔁 Refresh</button>
+      <ul id="sidebarHistory"></ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header>
+        <h1>🔧 IOTIQ Device Control Panel</h1>
+        <nav>
+          <button onclick="navigateTo('dashboard')">🏠 Dashboard</button>
+          <button onclick="navigateTo('create')">➕ Create Thing</button>
+          <button onclick="navigateTo('search')">🔍 Search Devices</button>
+          <button onclick="navigateTo('monthly')">📊 Monthly Stats</button>
+        </nav>
+      </header>
+
+      <section id="dashboard" class="section active">
+        <h2>📊 Welcome to the IOTIQ Dashboard</h2>
+        <p>Use the sidebar to manage your devices.</p>
+      </section>
+
+      <!-- Updated Create Section -->
+      <section id="create" class="section">
+        <h2>➕ Create New Thing</h2>
+        <form id="createForm">
+          <label for="deviceType">Select Device:</label>
+          <select id="deviceType" required>
+            <option value="" disabled selected>Select Device</option>
+            <option value="Tank">Tank</option>
+            <option value="Base">Base</option>
+          </select>
+
+          <label for="thingIdInput">Generated Thing ID:</label>
+          <input type="text" id="thingIdInput" placeholder="Thing ID will appear here" readonly required />
+
+          <label for="thingNameInput">Thing Name:</label>
+          <input type="text" id="thingNameInput" placeholder="Enter Thing Name" required />
+
+          <button type="submit">🚀 Create</button>
+        </form>
+        <div id="output" class="output"></div>
+      </section>
+
+      <section id="search" class="section">
+        <h2>🔍 Search Devices</h2>
+        <input type="text" id="searchInput" placeholder="Enter device name..." />
+        <ul id="searchResults" class="search-results"></ul>
+      </section>
+
+      <section id="monthly" class="section">
+        <h2>📊 Monthly Device Creation</h2>
+        <p id="monthlyStats" style="font-size: 18px; font-weight: bold;">Loading...</p>
+
+        <div style="margin-top: 20px;">
+          <input type="month" id="monthPicker" />
+          <button onclick="downloadMonthlyHistory()">⬇️ List Thing</button>
+        </div>
+
+        <ul id="monthlyResults" class="search-results"></ul>
+      </section>
+    </main>
+  </div>
+
+  <!-- JavaScript -->
+  <script>
+    function navigateTo(section) {
+      document.querySelectorAll(".section").forEach(sec => sec.classList.remove("active"));
+      document.getElementById(section).classList.add("active");
+
+      if (section === 'monthly') {
+        loadMonthlyStats();
+      }
+    }
+
+    document.getElementById("deviceType").addEventListener("change", function () {
+      const device = this.value;
+      let prefix = "";
+      if (device === "Tank") {
+        prefix = "funnelbm";
+      } else if (device === "Base") {
+        prefix = "IoTIQbm";
+      }
+
+      const randomLetter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+      const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, "0");
+      const fullId = `${prefix}${randomLetter}${randomNum}`;
+
+      document.getElementById("thingIdInput").value = fullId;
+    });
+
+    document.getElementById("createForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const device = document.getElementById("deviceType").value;
+      const thingName = document.getElementById("thingNameInput").value.trim();
+      const thingId = document.getElementById("thingIdInput").value.trim();
+
+      if (!device || !thingName || !thingId) {
+        alert("Please complete all fields.");
+        return;
+      }
+
+      const res = await fetch("/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ thingName: thingId }) // Only sending generated thingId
+      });
+
+      const html = await res.text();
+      document.getElementById("output").innerHTML = html;
+
+      document.getElementById("createForm").reset();
+      document.getElementById("thingIdInput").value = "";
+      loadSidebarHistory();
+    });
+
+    async function loadSidebarHistory() {
+      const res = await fetch("/history");
+      const history = await res.json();
+      const sidebar = document.getElementById("sidebarHistory");
+      sidebar.innerHTML = "";
+
+      history.reverse().forEach((t, index) => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <span>${index + 1}. ${t.name}</span>
+          <div>
+            <a href="/certs/${t.name}.zip" download>⬇️ Download</a>
+            <button onclick="deleteThing('${t.name}')">🗑️</button>
+          </div>
+        `;
+        sidebar.appendChild(li);
+      });
+    }
+
+    async function deleteThing(thingName) {
+      if (!thingName || !confirm(`Are you sure you want to delete '${thingName}'?`)) return;
+
+      const res = await fetch("/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ thingName })
+      });
+
+      await res.text();
+      loadSidebarHistory();
+      document.getElementById("searchInput").dispatchEvent(new Event("input"));
+    }
+
+    document.getElementById("searchInput").addEventListener("input", async (e) => {
+      const keyword = e.target.value.trim();
+      const list = document.getElementById("searchResults");
+      if (!keyword) return (list.innerHTML = "");
+
+      const res = await fetch(`/search?q=${encodeURIComponent(keyword)}`);
+      const results = await res.json();
+
+      list.innerHTML = "";
+
+      if (!results.length) {
+        list.innerHTML = "<li>No devices found.</li>";
+        return;
+      }
+
+      results.forEach(d => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <strong>${d.thingName}</strong><br/>
+          👤 User: ${d.userName}<br/>
+          🆔 Device ID: ${d.deviceId}<br/>
+          🏢 Company: ${d.company}<br/>
+          🔗 Thing Attached: ${d.thingAttached}<br/>
+          📦 Status: ${d.deviceStatus}<br/>
+          ${d.firmwareUrl ? `📁 <a href="${d.firmwareUrl}" download>Firmware</a> |` : ""}
+          ${d.configUrl ? `<a href="${d.configUrl}" download>Config</a><br/>` : ""}
+          📦 <a href="/certs/${d.thingName}.zip" download>Download ZIP</a>
+        `;
+        list.appendChild(li);
+      });
+    });
+
+    async function loadMonthlyStats() {
+      const res = await fetch("/monthly-thing-count");
+      const data = await res.json();
+      const msg = `📅 Devices created in ${data.month} ${data.year}: ${data.count}`;
+      document.getElementById("monthlyStats").textContent = msg;
+    }
+
+    async function downloadMonthlyHistory() {
+      const month = document.getElementById("monthPicker").value;
+      if (!month) return alert("Please select a month.");
+
+      const [year, m] = month.split("-");
+
+      const res = await fetch(`/monthly-devices?month=${m}&year=${year}`);
+      const data = await res.json();
+
+      const list = document.getElementById("monthlyResults");
+      list.innerHTML = "";
+
+      if (!data.length) {
+        list.innerHTML = "<li>No devices found for this month.</li>";
+        return;
+      }
+
+      data.forEach(d => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <strong>${d.name}</strong><br/>
+          👤 User: ${d.userName}<br/>
+          🆔 Device ID: ${d.deviceId}<br/>
+          📅 Created: ${d.createdAt}<br/>
+          📦 <a href="/certs/${d.name}.zip" download>Download ZIP</a>
+        `;
+        list.appendChild(li);
+      });
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `iot-history-${month}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    loadSidebarHistory();
+  </script>
+</body>
+</html>
+
+

@@ -1,0 +1,300 @@
+/* Base Reset */
+body {
+  margin: 0;
+  font-family: "Segoe UI", sans-serif;
+  background: linear-gradient(to right top, #74ebd5, #9face6);
+  color: #fff;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+}
+
+/* App Layout */
+.app-container {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 280px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 24px;
+  margin: 20px;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar h2 {
+  font-size: 22px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  color: #fff;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  padding-bottom: 10px;
+}
+
+#sidebarHistory {
+  list-style: none;
+  padding-left: 0;
+}
+
+#sidebarHistory li {
+  padding: 10px;
+  margin: 8px 0;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+#sidebarHistory li:hover {
+  background: rgba(255, 255, 255, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Main content */
+.main-content {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+/* Header/Nav */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 26px;
+  flex: 1;
+}
+
+nav {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+nav button {
+  padding: 10px 14px;
+  background-color: #00bcd4;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+nav button:hover {
+  background-color: #0097a7;
+}
+
+/* Sections */
+.section {
+  display: none;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 20px;
+  border-radius: 16px;
+}
+
+.section.active {
+  display: block;
+}
+
+/* Forms and Inputs */
+form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+input[type="text"],
+input[type="date"],
+input[type="month"] {
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  min-width: 200px;
+  flex: 1;
+}
+
+input[type="month"] {
+  max-width: 200px;
+  background-color: rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+}
+
+/* Buttons */
+button {
+  padding: 10px 20px;
+  background-color: #00bcd4;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+button:hover {
+  background-color: #0097a7;
+}
+
+.refresh-button {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+/* Output & Results */
+.output {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 12px;
+  border-radius: 10px;
+  white-space: pre-wrap;
+  margin-top: 10px;
+}
+
+.search-results {
+  list-style: none;
+  padding-left: 0;
+}
+
+.search-results li {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 12px;
+  border-radius: 10px;
+  margin: 10px 0;
+  line-height: 1.5;
+  text-align: left;
+}
+
+/* Search Section */
+.search-section {
+  margin-top: 30px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.search-section input[type="text"] {
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  width: 250px;
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+/* Device Box */
+.device-box {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 15px;
+  margin-top: 20px;
+}
+
+/* 📊 Monthly Stats Section */
+#monthly {
+  text-align: center;
+  padding-top: 10px;
+}
+
+#monthly h2 {
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+
+#monthlyStats {
+  font-size: 26px;
+  font-weight: bold;
+  padding: 20px;
+  margin-top: 20px;
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  color: #fff;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  animation: fadeIn 0.6s ease-in-out;
+}
+
+#monthPicker {
+  margin: 20px 10px 10px;
+}
+
+#monthlyResults {
+  margin-top: 20px;
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .app-container {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .main-content {
+    padding: 15px;
+  }
+
+  header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  nav {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  nav button {
+    flex: 1 1 100%;
+    margin-top: 5px;
+  }
+
+  input[type="month"] {
+    width: 100%;
+    max-width: none;
+  }
+}
+
