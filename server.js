@@ -24,81 +24,115 @@ function writeHistory(data) {
   fs.writeFileSync(HISTORY_FILE, JSON.stringify(data, null, 2));
 }
 
-// ✅ Create Thing + ZIP
-app.post("/create", (req, res) => {
-  const thingName = req.body.thingName;
-  if (!thingName) return res.send("❌ Thing name is required.");
+// ✅ Create Multiple Things + ZIPs
+app.post("/create", async (req, res) => {
+  const { thingNames } = req.body;
+  if (!Array.isArray(thingNames) || thingNames.length === 0) {
+    return res.send("❌ One or more thing names are required.");
+  }
 
-  const folderPath = path.join(__dirname, "certs", thingName);
-  const zipPath = path.join(__dirname, "certs", `${thingName}.zip`);
+  const created = [];
+  const alreadyExists = [];
   const history = readHistory();
 
-  if (fs.existsSync(zipPath)) {
-    const alreadyInHistory = history.some(entry => entry.name === thingName);
-    if (!alreadyInHistory) {
-      history.push({ name: thingName, createdAt: new Date().toISOString() });
-      writeHistory(history);
+  for (const name of thingNames) {
+    const folderPath = path.join(__dirname, "certs", name);
+    const zipPath = path.join(__dirname, "certs", `${name}.zip`);
+
+    if (fs.existsSync(zipPath)) {
+      if (!history.some(entry => entry.name === name)) {
+        history.push({ name, createdAt: new Date().toISOString() });
+      }
+      alreadyExists.push(name);
+      continue;
     }
-    return res.send(`
-<pre>✅ Success:
-⚠️ Thing '${thingName}' already exists and ZIP file is downloaded.
-ℹ️ To recreate, delete the Thing from AWS IoT and remove: ./certs/${thingName}.zip
-</pre>
-<a href="/certs/${thingName}.zip" download>⬇️ Download Certificates</a>
-    `);
+
+    try {
+      await new Promise((resolve, reject) => {
+        exec(`bash ./create-iot-thing.sh ${name}`, (error, stdout, stderr) => {
+          if (error) {
+            console.error(`❌ Error creating ${name}:`, stderr);
+            return reject(stderr);
+          }
+
+          if (!history.some(entry => entry.name === name)) {
+            history.push({ name, createdAt: new Date().toISOString() });
+          }
+
+          const output = fs.createWriteStream(zipPath);
+          const archive = archiver("zip", { zlib: { level: 9 } });
+
+          archive.on("error", err => reject(err));
+          archive.pipe(output);
+          archive.directory(folderPath, name);
+          archive.finalize();
+
+          output.on("close", () => {
+            created.push(name);
+            resolve();
+          });
+        });
+      });
+    } catch (err) {
+      console.error(`Error with ${name}:`, err);
+    }
   }
 
-  exec(`bash ./create-iot-thing.sh ${thingName}`, (error, stdout, stderr) => {
-    if (error) {
-      return res.send(`<pre>❌ Error:\n${stderr}</pre>`);
-    }
+  writeHistory(history);
 
-    if (!history.some(entry => entry.name === thingName)) {
-      history.push({ name: thingName, createdAt: new Date().toISOString() });
-      writeHistory(history);
-    }
+  res.send(`
+    <pre>✅ Success!
+Created: ${created.length} thing(s)
+${created.join("\n")}
 
-    const output = fs.createWriteStream(zipPath);
-    const archive = archiver("zip", { zlib: { level: 9 } });
-
-    output.on("close", () => {
-      res.send(`
-<pre>✅ Success:\n${stdout}</pre>
-<a href="/certs/${thingName}.zip" download>⬇️ Download Certificates</a>
-      `);
-    });
-
-    archive.on("error", err => {
-      console.error("Archive error:", err);
-      res.send(`<pre>❌ Error creating zip:\n${err.message}</pre>`);
-    });
-
-    archive.pipe(output);
-    archive.directory(folderPath, thingName);
-    archive.finalize();
-  });
+⚠️ Already existed: ${alreadyExists.length}
+${alreadyExists.join("\n")}
+</pre>
+${created.map(n => `<a href="/certs/${n}.zip" download>⬇️ ${n}.zip</a>`).join("<br>")}
+  `);
 });
 
-// ✅ Device History
+// ✅ Device History Page
 app.get("/history", (req, res) => {
-  let history = readHistory();
+  const history = readHistory();
   const unique = Array.from(new Map(history.map(item => [item.name, item])).values());
 
-  const { from, to } = req.query;
-  if (from && to) {
-    const fromDate = new Date(from);
-    const toDate = new Date(to);
-    const filtered = unique.filter(t => {
-      const createdAt = new Date(t.createdAt);
-      return createdAt >= fromDate && createdAt <= toDate;
-    });
-    return res.json(filtered);
-  }
+  const html = `
+    <html>
+    <head>
+      <title>Device History</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f0f2f5; }
+        h2 { color: #333; }
+        ul { list-style: none; padding: 0; }
+        li { background: white; margin-bottom: 10px; padding: 10px; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+      </style>
+    </head>
+    <body>
+      <h2>📋 All Created Things</h2>
+      <ul>
+        ${unique.map(entry => `
+          <li>
+            🆔 <strong>${entry.name}</strong><br/>
+            📅 Created at: ${new Date(entry.createdAt).toLocaleString()}<br/>
+            📦 <a href="/certs/${entry.name}.zip" download>Download ZIP</a>
+          </li>
+        `).join("")}
+      </ul>
+    </body>
+    </html>
+  `;
 
-  res.json(unique);
+  res.send(html);
 });
 
-// ✅ Monthly Devices by Month Picker (YYYY-MM)
+// ✅ JSON API for Device History (used by frontend JS)
+app.get("/api/history", (req, res) => {
+  const history = readHistory();
+  res.json(history);
+});
+
+// ✅ Monthly Devices
 app.get("/monthly-devices", (req, res) => {
   const { month, year } = req.query;
   if (!month || !year) return res.status(400).json({ error: "Month and Year required" });
@@ -112,63 +146,19 @@ app.get("/monthly-devices", (req, res) => {
   res.json(filtered);
 });
 
-// ✅ NEW: Monthly Device List HTML Page
-app.get("/monthly-device-list", (req, res) => {
-  const { month, year } = req.query;
-  if (!month || !year) {
-    return res.status(400).send("<h3>❌ Month and Year required in query string.</h3>");
-  }
-
+// ✅ Monthly Stats Count
+app.get("/monthly-thing-count", (req, res) => {
   const history = readHistory();
-  const filtered = history.filter(entry => {
-    const created = new Date(entry.createdAt);
-    return created.getMonth() + 1 === Number(month) && created.getFullYear() === Number(year);
-  });
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
 
-  const html = `
-    <html>
-    <head>
-      <title>Monthly Devices (${month}/${year})</title>
-      <style>
-        body { font-family: Arial; padding: 2rem; background: #f0f8ff; }
-        h2 { margin-bottom: 1rem; }
-        ul { list-style: none; padding: 0; }
-        li { background: #fff; margin-bottom: 10px; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
-        a { background: #007bff; color: white; padding: 6px 10px; border-radius: 4px; text-decoration: none; }
-        a:hover { background: #0056b3; }
-      </style>
-    </head>
-    <body>
-      <h2>📋 Devices Created in ${month}/${year}</h2>
-      <ul>
-        ${filtered.map(entry => `
-          <li>
-            <span>${entry.name}</span>
-            <a href="/certs/${entry.name}.zip" download>⬇️ Download</a>
-          </li>
-        `).join("")}
-      </ul>
-    </body>
-    </html>
-  `;
-
-  res.send(html);
-});
-
-// ✅ Download JSON file (still works if needed)
-app.post("/download-history", (req, res) => {
-  const { startDate, endDate } = req.body;
-  if (!startDate || !endDate) {
-    return res.status(400).json({ error: "Both startDate and endDate are required." });
-  }
-
-  const history = readHistory();
-  const filtered = history.filter(entry => {
+  const monthlyCount = history.filter(entry => {
     const createdAt = new Date(entry.createdAt);
-    return createdAt >= new Date(startDate) && createdAt <= new Date(endDate);
-  });
+    return createdAt.getMonth() === currentMonth && createdAt.getFullYear() === currentYear;
+  }).length;
 
-  res.json(filtered);
+  res.json({ month: now.toLocaleString("default", { month: "long" }), year: currentYear, count: monthlyCount });
 });
 
 // ✅ Delete Device
@@ -193,22 +183,7 @@ app.post("/delete", (req, res) => {
   });
 });
 
-// ✅ Count Devices This Month
-app.get("/monthly-thing-count", (req, res) => {
-  const history = readHistory();
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
-
-  const monthlyCount = history.filter(entry => {
-    const createdAt = new Date(entry.createdAt);
-    return createdAt.getMonth() === currentMonth && createdAt.getFullYear() === currentYear;
-  }).length;
-
-  res.json({ month: now.toLocaleString("default", { month: "long" }), year: currentYear, count: monthlyCount });
-});
-
-// ✅ Full-text Search via meta.json
+// ✅ Full-text Search
 app.get("/search", (req, res) => {
   const query = req.query.q?.toLowerCase() || "";
   const certsPath = path.join(__dirname, "certs");
@@ -220,7 +195,6 @@ app.get("/search", (req, res) => {
 
   folders.forEach(folder => {
     const metaPath = path.join(certsPath, folder, "meta.json");
-    const certPath = path.join(certsPath, folder, "certificate.pem.crt");
 
     if (fs.existsSync(metaPath)) {
       try {
@@ -234,14 +208,7 @@ app.get("/search", (req, res) => {
         ].some(field => field?.toLowerCase().includes(query));
 
         if (match) {
-          results.push({
-            ...meta,
-            thingAttached: fs.existsSync(certPath),
-            firmwareUrl: fs.existsSync(path.join(certsPath, folder, "firmware.bin"))
-              ? `/certs/${folder}/firmware.bin` : null,
-            configUrl: fs.existsSync(path.join(certsPath, folder, "config.json"))
-              ? `/certs/${folder}/config.json` : null
-          });
+          results.push(meta);
         }
       } catch (err) {
         console.warn(`⚠️ Error parsing meta.json for ${folder}`);
@@ -252,8 +219,7 @@ app.get("/search", (req, res) => {
   res.json(results);
 });
 
+// ✅ Start server
 app.listen(PORT, () => {
   console.log(`🚀 IOTIQ App running at http://localhost:${PORT}`);
 });
-
-
