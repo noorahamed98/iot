@@ -1,9 +1,10 @@
-/* Base Reset */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap");
+
 body {
   margin: 0;
-  font-family: "Segoe UI", sans-serif;
-  background: linear-gradient(to right top, #74ebd5, #9face6);
-  color: #fff;
+  font-family: "Inter", sans-serif;
+  background: linear-gradient(to right top, #101024,#000b27);
+  color: #000b27;
   height: 100vh;
   overflow: hidden;
   display: flex;
@@ -16,57 +17,15 @@ body {
   height: 100vh;
 }
 
-/* Sidebar */
+/* Sidebar (Optional, kept hidden if not used) */
 .sidebar {
-  width: 280px;
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  padding: 24px;
-  margin: 20px;
-  border-radius: 20px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-  overflow-y: auto;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  display: flex;
-  flex-direction: column;
-}
-
-.sidebar h2 {
-  font-size: 22px;
-  margin-bottom: 16px;
-  font-weight: 600;
-  color: #fff;
-  text-align: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-  padding-bottom: 10px;
-}
-
-#sidebarHistory {
-  list-style: none;
-  padding-left: 0;
-}
-
-#sidebarHistory li {
-  padding: 10px;
-  margin: 8px 0;
-  background: rgba(255, 255, 255, 0.25);
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-weight: 500;
-}
-
-#sidebarHistory li:hover {
-  background: rgba(255, 255, 255, 0.35);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  display: none;
 }
 
 /* Main content */
 .main-content {
   flex: 1;
-  padding: 20px;
+  padding: 32px;
   overflow-y: auto;
 }
 
@@ -76,172 +35,131 @@ header {
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
-header h1 {
-  margin: 0;
-  font-size: 26px;
-  flex: 1;
+.logo {
+  height: 60px;
+  width: auto;
 }
 
 nav {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
 nav button {
-  padding: 10px 14px;
-  background-color: #00bcd4;
+  padding: 10px 16px;
+  background-color: #90d5f8;
   border: none;
   border-radius: 8px;
-  color: white;
+  color: #fff;
+  font-weight: 500;
   cursor: pointer;
-  font-weight: bold;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
 }
 
 nav button:hover {
-  background-color: #0097a7;
+  background-color: #90d5f8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
 }
 
-/* Sections */
+/* Section layout */
 .section {
   display: none;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 20px;
+  background: rgb(255, 255, 255);
+  padding: 24px;
   border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  animation: fadeIn 0.5s ease-in-out;
 }
 
 .section.active {
   display: block;
 }
 
-/* Forms and Inputs */
+/* Form Styling */
 form {
   display: flex;
-  gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 20px;
+  gap: 20px;
+  background: #b3dff5;
+  padding: 20px;
+  border-radius: 12px;
+  justify-content: space-between;
 }
 
-input[type="text"],
-input[type="date"],
-input[type="month"] {
-  padding: 10px;
-  border-radius: 8px;
-  border: none;
-  background-color: rgba(255, 255, 255, 0.2);
+/* Each label-input pair in its own box */
+form label {
+  width: 100%;
+  font-weight: bold;
+  margin-bottom: 6px;
+  display: block;
+}
+
+form > div.form-group {
+  flex: 1 1 45%;  /* Each group takes up to 45% width, wraps as needed */
+  min-width: 250px;
+}
+
+/* Style inputs and selects */
+form input,
+form select {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+}
+
+/* Submit button full width */
+form button[type="submit"] {
+  flex: 1 1 100%;
+  margin-top: 20px;
+  background: #05102b;
   color: white;
-  min-width: 200px;
-  flex: 1;
-}
-
-input[type="month"] {
-  max-width: 200px;
-  background-color: rgba(255, 255, 255, 0.25);
+  padding: 12px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: none;
   cursor: pointer;
 }
 
-/* Buttons */
+input:focus,
+select:focus {
+  outline: none;
+  border-color: #38bdf8;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
 button {
   padding: 10px 20px;
-  background-color: #00bcd4;
+  background-color: #000b27;
   border: none;
   border-radius: 8px;
   color: white;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.3s ease;
+  transition: background 0.3s ease, transform 0.2s ease;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
 }
 
 button:hover {
-  background-color: #0097a7;
+  background-color: #081e4b;
+  transform: translateY(-1px);
 }
 
-.refresh-button {
-  width: 100%;
-  margin-bottom: 10px;
-}
-
-/* Output & Results */
 .output {
-  background: rgba(255, 255, 255, 0.15);
-  padding: 12px;
-  border-radius: 10px;
-  white-space: pre-wrap;
-  margin-top: 10px;
-}
-
-.search-results {
-  list-style: none;
-  padding-left: 0;
-}
-
-.search-results li {
-  background: rgba(255, 255, 255, 0.15);
-  padding: 12px;
-  border-radius: 10px;
-  margin: 10px 0;
-  line-height: 1.5;
-  text-align: left;
-}
-
-/* Search Section */
-.search-section {
-  margin-top: 30px;
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.search-section input[type="text"] {
-  padding: 10px;
-  border-radius: 8px;
-  border: none;
-  width: 250px;
-  background-color: rgba(255, 255, 255, 0.2);
-  color: white;
-}
-
-/* Device Box */
-.device-box {
-  background-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 16px;
   border-radius: 12px;
-  padding: 15px;
-  margin-top: 20px;
-}
-
-/* 📊 Monthly Stats Section */
-#monthly {
-  text-align: center;
-  padding-top: 10px;
-}
-
-#monthly h2 {
-  font-size: 24px;
-  margin-bottom: 20px;
-}
-
-#monthlyStats {
-  font-size: 26px;
-  font-weight: bold;
-  padding: 20px;
-  margin-top: 20px;
-  display: inline-block;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 12px;
-  color: #fff;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  animation: fadeIn 0.6s ease-in-out;
-}
-
-#monthPicker {
-  margin: 20px 10px 10px;
-}
-
-#monthlyResults {
+  font-size: 15px;
+  color: #e0f2fe;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   margin-top: 20px;
 }
 
@@ -259,42 +177,17 @@ button:hover {
 
 /* Responsive */
 @media (max-width: 768px) {
-  .app-container {
-    flex-direction: column;
-  }
-
-  .sidebar {
-    width: 100%;
-    height: auto;
-    border-right: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-    margin: 0;
-    border-radius: 0;
-    box-shadow: none;
-  }
-
   .main-content {
-    padding: 15px;
-  }
-
-  header {
-    flex-direction: column;
-    align-items: flex-start;
+    padding: 20px;
   }
 
   nav {
-    flex-wrap: wrap;
-    width: 100%;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
   }
 
   nav button {
-    flex: 1 1 100%;
-    margin-top: 5px;
-  }
-
-  input[type="month"] {
     width: 100%;
-    max-width: none;
   }
 }
-
