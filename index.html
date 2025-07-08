@@ -26,45 +26,44 @@
   <ul id="deviceHistoryList" class="search-results" style="display:none;"></ul>
 
   <form id="createForm">
-  <div class="form-group">
-    <label for="deviceType">Select Device:</label>
-    <select id="deviceType" required onchange="onDeviceTypeChange()">
-      <option value="" disabled selected>Select Device</option>
-      <option value="Tank">Tank</option>
-      <option value="Base">Base</option>
-    </select>
-  </div>
+    <div class="form-group">
+      <label for="deviceType">Select Device:</label>
+      <select id="deviceType" required onchange="onDeviceTypeChange()">
+        <option value="" disabled selected>Select Device</option>
+        <option value="Tank">Tank</option>
+        <option value="Base">Base</option>
+      </select>
+    </div>
 
-  <div class="form-group" id="baseModelWrapper" style="display:none">
-    <label for="baseModel">Select Base Model:</label>
-    <select id="baseModel">
-      <option disabled selected>Select Base Model</option>
-      <option>IOTIQBM_1</option>
-      <option>IOTIQBM_2</option>
-      <option>IOTIQBM_3</option>
-      <option>ACSBM</option>
-    </select>
-  </div>
+    <div class="form-group" id="baseModelWrapper" style="display:none">
+      <label for="baseModel">Select Base Model:</label>
+      <select id="baseModel">
+        <option disabled selected>Select Base Model</option>
+        <option>IOTIQBM_1</option>
+        <option>IOTIQBM_2</option>
+        <option>IOTIQBM_3</option>
+        <option>ACSBM</option>
+      </select>
+    </div>
 
-  <div class="form-group">
-    <label for="thingCount">No. of Things:</label>
-    <input type="number" id="thingCount" min="1" required />
-  </div>
+    <div class="form-group">
+      <label for="thingCount">No. of Things:</label>
+      <input type="number" id="thingCount" min="1" required />
+    </div>
 
-  <div class="form-group">
-    <label for="thingIdInput">Generated Thing ID(s):</label>
-    <input type="text" id="thingIdInput" placeholder="Thing ID(s) will appear here" readonly required />
-  </div>
+    <div class="form-group">
+      <label for="thingIdInput">Generated Thing ID(s):</label>
+      <input type="text" id="thingIdInput" placeholder="Thing ID(s) will appear here" readonly required />
+    </div>
 
-  <div class="form-group">
-    <label for="thingNameInput">Thing Name:</label>
-    <input type="text" id="thingNameInput" placeholder="Enter Thing Name" required />
-  </div>
+    <div class="form-group">
+      <label for="thingNameInput">Thing Name:</label>
+      <input type="text" id="thingNameInput" placeholder="Enter Thing Name" required />
+    </div>
 
-  <button type="submit">🚀 Create</button>
-</form>
+    <button type="submit">🚀 Create</button>
+  </form>
 </section>
-
 
       <section id="search" class="section">
         <h2>🔍 Search Devices</h2>
@@ -91,60 +90,60 @@
 
       if (section === 'monthly') loadMonthlyStats();
     }
-  async function fetchExistingIds(prefix) {
-    const res = await fetch("/api/history");
-    const history = await res.json();
-    const ids = history.map(h => h.name).filter(id => id.startsWith(prefix));
-    return ids;
-  }
 
-  async function generateThingIds() {
-    const type = document.getElementById("deviceType").value;
-    const model = document.getElementById("baseModel").value;
-    const count = parseInt(document.getElementById("thingCount").value);
-    if (!type || !count || (type === "Base" && !model)) return;
-
-    const now = new Date();
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const yy = String(now.getFullYear()).slice(2);
-    const date = `${mm}${yy}`;
-    const prefix = type === "Base" ? `IOTIQBM${date}A` : `funnelbm${date}A`;
-
-    const existing = await fetchExistingIds(prefix);
-    const numbers = existing.map(id => parseInt(id.slice(-3))).filter(n => !isNaN(n));
-    const start = numbers.length ? Math.max(...numbers) + 1 : 1;
-
-    let ids = [];
-    for (let i = 0; i < count; i++) {
-      ids.push(`${prefix}${String(start + i).padStart(3, '0')}`);
+    async function fetchExistingIds(prefix) {
+      const res = await fetch("/api/history");
+      const history = await res.json();
+      const ids = history.map(h => h.name).filter(id => id.startsWith(prefix));
+      return ids;
     }
-    document.getElementById("thingIdInput").value = count > 1 ? `${ids[0]} - ${ids[ids.length - 1]}` : ids[0];
-  }
 
-  document.getElementById("thingCount").addEventListener("input", generateThingIds);
-  document.getElementById("baseModel").addEventListener("change", generateThingIds);
+    async function generateThingIds() {
+      const type = document.getElementById("deviceType").value;
+      const model = document.getElementById("baseModel").value;
+      const count = parseInt(document.getElementById("thingCount").value);
+      if (!type || !count || (type === "Base" && !model)) return;
 
-  function onDeviceTypeChange() {
-    const deviceType = document.getElementById("deviceType").value;
-    document.getElementById("baseModelWrapper").style.display = deviceType === "Base" ? "block" : "none";
-    generateThingIds();
-  }
+      const now = new Date();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const yy = String(now.getFullYear()).slice(2);
+      const date = `${mm}${yy}`;
+      const prefix = type === "Base" ? `IOTIQBM${date}A` : `funnelbm${date}A`;
 
-  function showDeviceHistory() {
-    const list = document.getElementById("deviceHistoryList");
-    list.innerHTML = "<li>Loading...</li>";
-    list.style.display = "block";
-    fetch("/history")
-      .then(res => res.json())
-      .then(data => {
-        if (!data.length) return (list.innerHTML = "<li>No Devices Yet.</li>");
-        list.innerHTML = data
-          .map(
-            d => `<li><strong>${d.name}</strong><br/>📅 Created: ${new Date(d.createdAt).toLocaleString()}</li>`
-          )
-          .join("");
-      });
-  }
+      const existing = await fetchExistingIds(prefix);
+      const numbers = existing.map(id => parseInt(id.slice(-3))).filter(n => !isNaN(n));
+      const start = numbers.length ? Math.max(...numbers) + 1 : 1;
+
+      let ids = [];
+      for (let i = 0; i < count; i++) {
+        ids.push(`${prefix}${String(start + i).padStart(3, '0')}`);
+      }
+
+      document.getElementById("thingIdInput").value = count > 1 ? `${ids[0]} - ${ids[ids.length - 1]}` : ids[0];
+    }
+
+    document.getElementById("thingCount").addEventListener("input", generateThingIds);
+    document.getElementById("baseModel").addEventListener("change", generateThingIds);
+
+    function onDeviceTypeChange() {
+      const deviceType = document.getElementById("deviceType").value;
+      document.getElementById("baseModelWrapper").style.display = deviceType === "Base" ? "block" : "none";
+      generateThingIds();
+    }
+
+    function showDeviceHistory() {
+      const list = document.getElementById("deviceHistoryList");
+      list.innerHTML = "<li>Loading...</li>";
+      list.style.display = "block";
+      fetch("/history")
+        .then(res => res.json())
+        .then(data => {
+          if (!data.length) return (list.innerHTML = "<li>No Devices Yet.</li>");
+          list.innerHTML = data
+            .map(d => `<li><strong>${d.name}</strong><br/>📅 Created: ${new Date(d.createdAt).toLocaleString()}</li>`)
+            .join("");
+        });
+    }
 
     async function loadMonthlyStats() {
       const res = await fetch("/monthly-thing-count");
@@ -187,6 +186,39 @@
       a.download = `iot-history-${month}.json`;
       a.click();
       URL.revokeObjectURL(url);
+    }
+
+    // ✅ Create form submission
+    document.getElementById("createForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const thingIdStr = document.getElementById("thingIdInput").value.trim();
+      if (!thingIdStr) return alert("Thing ID is missing.");
+      
+      const thingNames = thingIdStr.includes(" - ")
+        ? expandRange(thingIdStr)
+        : [thingIdStr];
+
+      const res = await fetch("/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ thingNames }),
+      });
+
+      const html = await res.text();
+      document.getElementById("create").innerHTML = html;
+    });
+
+    // Helper to expand "prefixA001 - prefixA005" into array
+    function expandRange(rangeStr) {
+      const [start, end] = rangeStr.split(" - ");
+      const prefix = start.slice(0, -3);
+      const startNum = parseInt(start.slice(-3));
+      const endNum = parseInt(end.slice(-3));
+      const ids = [];
+      for (let i = startNum; i <= endNum; i++) {
+        ids.push(`${prefix}${String(i).padStart(3, "0")}`);
+      }
+      return ids;
     }
   </script>
 </body>
