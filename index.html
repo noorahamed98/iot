@@ -3,56 +3,68 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>IOTIQ | Device Manager</title>
+  <title>IOTIQ | Create Thing</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="app-container">
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <h2>📜 Device History</h2>
-      <button onclick="loadSidebarHistory()" class="refresh-button">🔁 Refresh</button>
-      <ul id="sidebarHistory"></ul>
-    </aside>
-
-    <!-- Main Content -->
     <main class="main-content">
       <header>
-        <h1>🔧 IOTIQ Device Control Panel</h1>
+        <img src="logo.png" class="logo" alt="IOTIQ Logo" />
         <nav>
-          <button onclick="navigateTo('dashboard')">🏠 Dashboard</button>
           <button onclick="navigateTo('create')">➕ Create Thing</button>
           <button onclick="navigateTo('search')">🔍 Search Devices</button>
           <button onclick="navigateTo('monthly')">📊 Monthly Stats</button>
         </nav>
       </header>
 
-      <section id="dashboard" class="section active">
-        <h2>📊 Welcome to the IOTIQ Dashboard</h2>
-        <p>Use the sidebar to manage your devices.</p>
-      </section>
+      <!-- Create Section as Default -->
+      <section id="create" class="section active">
+  <h1>➕ Create New Thing</h1>
 
-      <!-- Updated Create Section -->
-      <section id="create" class="section">
-        <h2>➕ Create New Thing</h2>
-        <form id="createForm">
-          <label for="deviceType">Select Device:</label>
-          <select id="deviceType" required>
-            <option value="" disabled selected>Select Device</option>
-            <option value="Tank">Tank</option>
-            <option value="Base">Base</option>
-          </select>
+  <button onclick="showDeviceHistory()" style="margin-bottom: 16px; background:#007bff;">📂 View Device History</button>
+  <ul id="deviceHistoryList" class="search-results" style="display:none;"></ul>
 
-          <label for="thingIdInput">Generated Thing ID:</label>
-          <input type="text" id="thingIdInput" placeholder="Thing ID will appear here" readonly required />
+  <form id="createForm">
+  <div class="form-group">
+    <label for="deviceType">Select Device:</label>
+    <select id="deviceType" required onchange="onDeviceTypeChange()">
+      <option value="" disabled selected>Select Device</option>
+      <option value="Tank">Tank</option>
+      <option value="Base">Base</option>
+    </select>
+  </div>
 
-          <label for="thingNameInput">Thing Name:</label>
-          <input type="text" id="thingNameInput" placeholder="Enter Thing Name" required />
+  <div class="form-group" id="baseModelWrapper" style="display:none">
+    <label for="baseModel">Select Base Model:</label>
+    <select id="baseModel">
+      <option disabled selected>Select Base Model</option>
+      <option>IOTIQBM_1</option>
+      <option>IOTIQBM_2</option>
+      <option>IOTIQBM_3</option>
+      <option>ACSBM</option>
+    </select>
+  </div>
 
-          <button type="submit">🚀 Create</button>
-        </form>
-        <div id="output" class="output"></div>
-      </section>
+  <div class="form-group">
+    <label for="thingCount">No. of Things:</label>
+    <input type="number" id="thingCount" min="1" required />
+  </div>
+
+  <div class="form-group">
+    <label for="thingIdInput">Generated Thing ID(s):</label>
+    <input type="text" id="thingIdInput" placeholder="Thing ID(s) will appear here" readonly required />
+  </div>
+
+  <div class="form-group">
+    <label for="thingNameInput">Thing Name:</label>
+    <input type="text" id="thingNameInput" placeholder="Enter Thing Name" required />
+  </div>
+
+  <button type="submit">🚀 Create</button>
+</form>
+</section>
+
 
       <section id="search" class="section">
         <h2>🔍 Search Devices</h2>
@@ -62,140 +74,83 @@
 
       <section id="monthly" class="section">
         <h2>📊 Monthly Device Creation</h2>
-        <p id="monthlyStats" style="font-size: 18px; font-weight: bold;">Loading...</p>
-
+        <p id="monthlyStats">Loading...</p>
         <div style="margin-top: 20px;">
           <input type="month" id="monthPicker" />
           <button onclick="downloadMonthlyHistory()">⬇️ List Thing</button>
         </div>
-
         <ul id="monthlyResults" class="search-results"></ul>
       </section>
     </main>
   </div>
 
-  <!-- JavaScript -->
   <script>
     function navigateTo(section) {
       document.querySelectorAll(".section").forEach(sec => sec.classList.remove("active"));
       document.getElementById(section).classList.add("active");
 
-      if (section === 'monthly') {
-        loadMonthlyStats();
-      }
+      if (section === 'monthly') loadMonthlyStats();
     }
+  async function fetchExistingIds(prefix) {
+    const res = await fetch("/api/history");
+    const history = await res.json();
+    const ids = history.map(h => h.name).filter(id => id.startsWith(prefix));
+    return ids;
+  }
 
-    document.getElementById("deviceType").addEventListener("change", function () {
-      const device = this.value;
-      let prefix = "";
-      if (device === "Tank") {
-        prefix = "funnelbm";
-      } else if (device === "Base") {
-        prefix = "IoTIQbm";
-      }
+  async function generateThingIds() {
+    const type = document.getElementById("deviceType").value;
+    const model = document.getElementById("baseModel").value;
+    const count = parseInt(document.getElementById("thingCount").value);
+    if (!type || !count || (type === "Base" && !model)) return;
 
-      const randomLetter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
-      const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, "0");
-      const fullId = `${prefix}${randomLetter}${randomNum}`;
+    const now = new Date();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const yy = String(now.getFullYear()).slice(2);
+    const date = `${mm}${yy}`;
+    const prefix = type === "Base" ? `IOTIQBM${date}A` : `funnelbm${date}A`;
 
-      document.getElementById("thingIdInput").value = fullId;
-    });
+    const existing = await fetchExistingIds(prefix);
+    const numbers = existing.map(id => parseInt(id.slice(-3))).filter(n => !isNaN(n));
+    const start = numbers.length ? Math.max(...numbers) + 1 : 1;
 
-    document.getElementById("createForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const device = document.getElementById("deviceType").value;
-      const thingName = document.getElementById("thingNameInput").value.trim();
-      const thingId = document.getElementById("thingIdInput").value.trim();
-
-      if (!device || !thingName || !thingId) {
-        alert("Please complete all fields.");
-        return;
-      }
-
-      const res = await fetch("/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ thingName: thingId }) // Only sending generated thingId
-      });
-
-      const html = await res.text();
-      document.getElementById("output").innerHTML = html;
-
-      document.getElementById("createForm").reset();
-      document.getElementById("thingIdInput").value = "";
-      loadSidebarHistory();
-    });
-
-    async function loadSidebarHistory() {
-      const res = await fetch("/history");
-      const history = await res.json();
-      const sidebar = document.getElementById("sidebarHistory");
-      sidebar.innerHTML = "";
-
-      history.reverse().forEach((t, index) => {
-        const li = document.createElement("li");
-        li.innerHTML = `
-          <span>${index + 1}. ${t.name}</span>
-          <div>
-            <a href="/certs/${t.name}.zip" download>⬇️ Download</a>
-            <button onclick="deleteThing('${t.name}')">🗑️</button>
-          </div>
-        `;
-        sidebar.appendChild(li);
-      });
+    let ids = [];
+    for (let i = 0; i < count; i++) {
+      ids.push(`${prefix}${String(start + i).padStart(3, '0')}`);
     }
+    document.getElementById("thingIdInput").value = count > 1 ? `${ids[0]} - ${ids[ids.length - 1]}` : ids[0];
+  }
 
-    async function deleteThing(thingName) {
-      if (!thingName || !confirm(`Are you sure you want to delete '${thingName}'?`)) return;
+  document.getElementById("thingCount").addEventListener("input", generateThingIds);
+  document.getElementById("baseModel").addEventListener("change", generateThingIds);
 
-      const res = await fetch("/delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ thingName })
+  function onDeviceTypeChange() {
+    const deviceType = document.getElementById("deviceType").value;
+    document.getElementById("baseModelWrapper").style.display = deviceType === "Base" ? "block" : "none";
+    generateThingIds();
+  }
+
+  function showDeviceHistory() {
+    const list = document.getElementById("deviceHistoryList");
+    list.innerHTML = "<li>Loading...</li>";
+    list.style.display = "block";
+    fetch("/history")
+      .then(res => res.json())
+      .then(data => {
+        if (!data.length) return (list.innerHTML = "<li>No Devices Yet.</li>");
+        list.innerHTML = data
+          .map(
+            d => `<li><strong>${d.name}</strong><br/>📅 Created: ${new Date(d.createdAt).toLocaleString()}</li>`
+          )
+          .join("");
       });
-
-      await res.text();
-      loadSidebarHistory();
-      document.getElementById("searchInput").dispatchEvent(new Event("input"));
-    }
-
-    document.getElementById("searchInput").addEventListener("input", async (e) => {
-      const keyword = e.target.value.trim();
-      const list = document.getElementById("searchResults");
-      if (!keyword) return (list.innerHTML = "");
-
-      const res = await fetch(`/search?q=${encodeURIComponent(keyword)}`);
-      const results = await res.json();
-
-      list.innerHTML = "";
-
-      if (!results.length) {
-        list.innerHTML = "<li>No devices found.</li>";
-        return;
-      }
-
-      results.forEach(d => {
-        const li = document.createElement("li");
-        li.innerHTML = `
-          <strong>${d.thingName}</strong><br/>
-          👤 User: ${d.userName}<br/>
-          🆔 Device ID: ${d.deviceId}<br/>
-          🏢 Company: ${d.company}<br/>
-          🔗 Thing Attached: ${d.thingAttached}<br/>
-          📦 Status: ${d.deviceStatus}<br/>
-          ${d.firmwareUrl ? `📁 <a href="${d.firmwareUrl}" download>Firmware</a> |` : ""}
-          ${d.configUrl ? `<a href="${d.configUrl}" download>Config</a><br/>` : ""}
-          📦 <a href="/certs/${d.thingName}.zip" download>Download ZIP</a>
-        `;
-        list.appendChild(li);
-      });
-    });
+  }
 
     async function loadMonthlyStats() {
       const res = await fetch("/monthly-thing-count");
       const data = await res.json();
-      const msg = `📅 Devices created in ${data.month} ${data.year}: ${data.count}`;
-      document.getElementById("monthlyStats").textContent = msg;
+      document.getElementById("monthlyStats").textContent =
+        `📅 Devices created in ${data.month} ${data.year}: ${data.count}`;
     }
 
     async function downloadMonthlyHistory() {
@@ -203,7 +158,6 @@
       if (!month) return alert("Please select a month.");
 
       const [year, m] = month.split("-");
-
       const res = await fetch(`/monthly-devices?month=${m}&year=${year}`);
       const data = await res.json();
 
@@ -222,8 +176,7 @@
           👤 User: ${d.userName}<br/>
           🆔 Device ID: ${d.deviceId}<br/>
           📅 Created: ${d.createdAt}<br/>
-          📦 <a href="/certs/${d.name}.zip" download>Download ZIP</a>
-        `;
+          📦 <a href="/certs/${d.name}.zip" download>Download ZIP</a>`;
         list.appendChild(li);
       });
 
@@ -235,10 +188,6 @@
       a.click();
       URL.revokeObjectURL(url);
     }
-
-    loadSidebarHistory();
   </script>
 </body>
 </html>
-
-
