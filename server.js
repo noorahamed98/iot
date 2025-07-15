@@ -51,28 +51,33 @@ app.post("/create", async (req, res) => {
       newThings.push(thingName);
     }
 
-    // Run all creations in parallel using Promise.all
+    // Step 1: Create all things concurrently
     await Promise.all(
       newThings.map(async (name) => {
         const model = baseModel || tankModel || "";
-        console.log(`Creating Thing: ${name}`);
-
         await execPromise(`bash ./create-iot-thing.sh ${name} ${type} ${model}`);
-        
-        // ✅ Only generate the header and zip after creation
-        const certDir = path.join(__dirname, "certs", name);
-        generateHeaderFile(name, certDir);
       })
     );
 
-    const history = fs.existsSync(historyFile) ? JSON.parse(fs.readFileSync(historyFile)) : [];
-    const newHistory = newThings.map(name => ({
-      name,
-      createdAt: new Date().toISOString(),
-      user: user || "Unknown"
-    }));
+    // Step 2: Generate headers + update history asynchronously
+    setTimeout(() => {
+      newThings.forEach(name => {
+        const certDir = path.join(__dirname, "certs", name);
+        try {
+          generateHeaderFile(name, certDir);
+        } catch (e) {
+          console.error("Header generation failed for", name, e);
+        }
+      });
 
-    fs.writeFileSync(historyFile, JSON.stringify([...history, ...newHistory], null, 2));
+      const history = fs.existsSync(historyFile) ? JSON.parse(fs.readFileSync(historyFile)) : [];
+      const newHistory = newThings.map(name => ({
+        name,
+        createdAt: new Date().toISOString(),
+        user: user || "Unknown"
+      }));
+      fs.writeFileSync(historyFile, JSON.stringify([...history, ...newHistory], null, 2));
+    }, 0); // Non-blocking
 
     const createdList = newThings.map(n => `<li>${n}</li>`).join("");
     res.send(`✅ Created ${count} thing(s):<ul>${createdList}</ul>`);
@@ -82,6 +87,7 @@ app.post("/create", async (req, res) => {
     res.status(500).send("Error creating one or more things.");
   }
 });
+
 
 // ✅ Device History Page
 app.get("/history", (req, res) => {
