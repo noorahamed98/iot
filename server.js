@@ -26,70 +26,61 @@ function writeHistory(data) {
 
 // ✅ Create Multiple Things + ZIPs
 app.post("/create", async (req, res) => {
-  const { thingNames } = req.body;
-  if (!Array.isArray(thingNames) || thingNames.length === 0) {
-    return res.send("❌ One or more thing names are required.");
+  const { type, baseModel, tankModel, count, user } = req.body;
+  if (!type || !count || (type === "Base" && !baseModel) || (type === "Tank" && !tankModel)) {
+    return res.status(400).send("Invalid input");
   }
 
-  const created = [];
-  const alreadyExists = [];
-  const history = readHistory();
+  const prefix = type === "Tank" ? tankPrefixes[tankModel] : basePrefixes[baseModel];
+  const now = new Date();
+  const dateCode = `${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getFullYear()).slice(-2)}`;
 
-  for (const name of thingNames) {
-    const folderPath = path.join(__dirname, "certs", name);
-    const zipPath = path.join(__dirname, "certs", `${name}.zip`);
+  try {
+    const things = await listThingsByPrefix(`${prefix}${dateCode}A`);
+    const maxId = things.reduce((max, thing) => {
+      const match = thing.match(/A(\d{3})$/);
+      const num = match ? parseInt(match[1]) : 0;
+      return Math.max(max, num);
+    }, 0);
 
-    if (fs.existsSync(zipPath)) {
-      if (!history.some(entry => entry.name === name)) {
-        history.push({ name, createdAt: new Date().toISOString() });
-      }
-      alreadyExists.push(name);
-      continue;
+    const pad = (n) => n.toString().padStart(3, "0");
+    const newThings = [];
+    for (let i = 1; i <= count; i++) {
+      const id = maxId + i;
+      const thingName = `${prefix}${dateCode}A${pad(id)}`;
+      newThings.push(thingName);
     }
 
-    try {
-      await new Promise((resolve, reject) => {
-        exec(`bash ./create-iot-thing.sh ${name}`, (error, stdout, stderr) => {
-          if (error) {
-            console.error(`❌ Error creating ${name}:`, stderr);
-            return reject(stderr);
-          }
+    // Run all creations in parallel using Promise.all
+    await Promise.all(
+      newThings.map(async (name) => {
+        const model = baseModel || tankModel || "";
+        console.log(`Creating Thing: ${name}`);
 
-          if (!history.some(entry => entry.name === name)) {
-            history.push({ name, createdAt: new Date().toISOString() });
-          }
+        await execPromise(`bash ./create-iot-thing.sh ${name} ${type} ${model}`);
+        
+        // ✅ Only generate the header and zip after creation
+        const certDir = path.join(__dirname, "certs", name);
+        generateHeaderFile(name, certDir);
+      })
+    );
 
-          const output = fs.createWriteStream(zipPath);
-          const archive = archiver("zip", { zlib: { level: 9 } });
+    const history = fs.existsSync(historyFile) ? JSON.parse(fs.readFileSync(historyFile)) : [];
+    const newHistory = newThings.map(name => ({
+      name,
+      createdAt: new Date().toISOString(),
+      user: user || "Unknown"
+    }));
 
-          archive.on("error", err => reject(err));
-          archive.pipe(output);
-          archive.directory(folderPath, name);
-          archive.finalize();
+    fs.writeFileSync(historyFile, JSON.stringify([...history, ...newHistory], null, 2));
 
-          output.on("close", () => {
-            created.push(name);
-            resolve();
-          });
-        });
-      });
-    } catch (err) {
-      console.error(`Error with ${name}:`, err);
-    }
+    const createdList = newThings.map(n => `<li>${n}</li>`).join("");
+    res.send(`✅ Created ${count} thing(s):<ul>${createdList}</ul>`);
+
+  } catch (err) {
+    console.error("Create error:", err);
+    res.status(500).send("Error creating one or more things.");
   }
-
-  writeHistory(history);
-
-  res.send(`
-    <pre>✅ Success!
-Created: ${created.length} thing(s)
-${created.join("\n")}
-
-⚠️ Already existed: ${alreadyExists.length}
-${alreadyExists.join("\n")}
-</pre>
-${created.map(n => `<a href="/certs/${n}.zip" download>⬇️ ${n}.zip</a>`).join("<br>")}
-  `);
 });
 
 // ✅ Device History Page
