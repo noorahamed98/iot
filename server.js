@@ -218,6 +218,37 @@ app.get("/search", (req, res) => {
 
   res.json(results);
 });
+app.post("/delete-all", async (req, res) => {
+  try {
+    const history = fs.existsSync(historyFile) ? JSON.parse(fs.readFileSync(historyFile)) : [];
+
+    for (const entry of history) {
+      const thingName = entry.name;
+      try {
+        await execPromise(`bash ./delete-iot-thing.sh ${thingName}`);
+      } catch (err) {
+        console.warn(`⚠️ Error deleting ${thingName}:`, err.message);
+      }
+
+      const certDir = path.join(__dirname, "certs", thingName);
+      const headerFile = path.join(__dirname, "certs", `${thingName}.h`);
+      if (fs.existsSync(certDir)) {
+        fs.rmSync(certDir, { recursive: true, force: true });
+      }
+      if (fs.existsSync(headerFile)) {
+        fs.rmSync(headerFile, { force: true });
+      }
+    }
+
+    // Clear the history file
+    fs.writeFileSync(historyFile, JSON.stringify([], null, 2));
+    res.send("✅ All devices deleted successfully.");
+  } catch (err) {
+    console.error("❌ Error in /delete-all:", err);
+    res.status(500).send("❌ Failed to delete all devices.");
+  }
+});
+
 
 // ✅ Start server
 app.listen(PORT, () => {
