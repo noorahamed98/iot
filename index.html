@@ -3,222 +3,553 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>IOTIQ | Create Thing</title>
+  <title>IOTIQ | Device Manager</title>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    .loading-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 24px; z-index: 9999;
+    }
+    .auth-section {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: #000000dd;
+      display: flex; justify-content: center; align-items: center;
+      z-index: 99999;
+      flex-direction: column;
+    }
+    .auth-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .auth-tabs button {
+      flex: 1;
+      padding: 10px;
+      background: #0b234b;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .auth-tabs button.active {
+      background: #021024;
+    }
+    .auth-form {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      width: 300px;
+      display: flex; flex-direction: column; gap: 15px;
+    }
+    .auth-form input, .auth-form button {
+      padding: 10px;
+      font-size: 16px;
+    }
+    .auth-form button {
+      background: #0b234b;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    #previewRange {
+      margin-top: 8px;
+      font-style: italic;
+      color: #333;
+    }
+    .filter-wrapper {
+      display: flex; justify-content: space-between;
+      align-items: center; padding: 10px 0; gap: 10px;
+    }
+    .metadata {
+      margin-left: 20px;
+      font-size: 14px;
+    }
+    .form-group {
+      margin-bottom: 10px;
+    }
+  </style>
 </head>
 <body>
-  <div class="app-container">
-    <main class="main-content">
-      <header>
-        <img src="logo.png" class="logo" alt="IOTIQ Logo" />
-        <nav>
-          <button onclick="navigateTo('create')">➕ Create Thing</button>
-          <button onclick="navigateTo('search')">🔍 Search Devices</button>
-          <button onclick="navigateTo('monthly')">📊 Monthly Stats</button>
-        </nav>
-      </header>
-
-      <!-- Create Section as Default -->
-      <section id="create" class="section active">
-  <h1>➕ Create New Thing</h1>
-
-  <button onclick="showDeviceHistory()" style="margin-bottom: 16px; background:#007bff;">📂 View Device History</button>
-  <ul id="deviceHistoryList" class="search-results" style="display:none;"></ul>
-
-  <form id="createForm">
-    <div class="form-group">
-      <label for="deviceType">Select Device:</label>
-      <select id="deviceType" required onchange="onDeviceTypeChange()">
-        <option value="" disabled selected>Select Device</option>
-        <option value="Tank">Tank</option>
-        <option value="Base">Base</option>
-      </select>
+  <!-- Auth Section -->
+  <div class="auth-section" id="authSection">
+    <div class="auth-tabs">
+      <button id="loginTab" class="active" onclick="toggleAuth('login')">Login</button>
+      <button id="registerTab" onclick="toggleAuth('register')">Register</button>
     </div>
-
-    <div class="form-group" id="baseModelWrapper" style="display:none">
-      <label for="baseModel">Select Base Model:</label>
-      <select id="baseModel">
-        <option disabled selected>Select Base Model</option>
-        <option>IOTIQBM_1</option>
-        <option>IOTIQBM_2</option>
-        <option>IOTIQBM_3</option>
-        <option>ACSBM</option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <label for="thingCount">No. of Things:</label>
-      <input type="number" id="thingCount" min="1" required />
-    </div>
-
-    <div class="form-group">
-      <label for="thingIdInput">Generated Thing ID(s):</label>
-      <input type="text" id="thingIdInput" placeholder="Thing ID(s) will appear here" readonly required />
-    </div>
-
-    <div class="form-group">
-      <label for="thingNameInput">Thing Name:</label>
-      <input type="text" id="thingNameInput" placeholder="Enter Thing Name" required />
-    </div>
-
-    <button type="submit">🚀 Create</button>
-  </form>
-</section>
-
-      <section id="search" class="section">
-        <h2>🔍 Search Devices</h2>
-        <input type="text" id="searchInput" placeholder="Enter device name..." />
-        <ul id="searchResults" class="search-results"></ul>
-      </section>
-
-      <section id="monthly" class="section">
-        <h2>📊 Monthly Device Creation</h2>
-        <p id="monthlyStats">Loading...</p>
-        <div style="margin-top: 20px;">
-          <input type="month" id="monthPicker" />
-          <button onclick="downloadMonthlyHistory()">⬇️ List Thing</button>
-        </div>
-        <ul id="monthlyResults" class="search-results"></ul>
-      </section>
-    </main>
+    <form class="auth-form" id="loginForm" onsubmit="return handleLogin(event)">
+      <h3>Login</h3>
+      <input type="text" id="username" placeholder="Username" required />
+      <input type="password" id="password" placeholder="Password" required />
+      <button type="submit">Login</button>
+    </form>
+    <form class="auth-form" id="registerForm" onsubmit="return handleRegister(event)" style="display: none;">
+      <h3>Register</h3>
+      <input type="text" id="registerUsername" placeholder="Username" required />
+      <input type="password" id="registerPassword" placeholder="Password" required />
+      <button type="submit">Register</button>
+    </form>
   </div>
+  <!-- Top Header -->
+<div class="top-header">
+   <button id="sidebarToggle" class="sidebar-toggle">☰</button>
+  <img src="logo/logo.png" class="logo" alt="Logo" />
+  <div class="profile-section">
+    <img src="logo/profile.png" alt="Profile" />
+    <div class="profile-dropdown">
+      <button onclick="logout()">Logout</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sidebar Navigation -->
+<div class="sidebar">
+  <button onclick="navigateTo('create')">➕ Create Thing</button>
+  <button onclick="navigateTo('search')">🔍 Search Things</button>
+  <button onclick="navigateTo('monthly')">📊 Monthly Stats</button>
+  <button onclick="navigateTo('history')">📂 Device History</button>
+  <button onclick="navigateTo('addModel')">⚙️ Add Device</button>
+</div>
+
+  <!-- Main App -->
+  <div class="app-container" style="display:none" id="appContainer">
+    <main class="main-content">
+
+      <!-- Create Section -->
+      <section id="create" class="section active">
+        <h1>➕ Create New Thing</h1>
+        <form id="createForm">
+          <div class="form-group">
+            <label for="deviceType">Select Device:</label>
+            <select id="deviceType" required onchange="onDeviceTypeChange(); updatePreviewRange()">
+              <option value="" disabled selected>Select Device</option>
+              <option value="Tank">Tank</option>
+              <option value="Base">Base</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="tankModelWrapper" style="display:none">
+            <label for="tankModel">Select Tank Model:</label>
+            <select id="tankModel" onchange="updatePreviewRange()">
+              <option disabled selected>Select Tank Model</option>
+              <option>FUNNELBM_1</option>
+              <option>FUNNELBM_2</option>
+              <option>FUNNELBM_3</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="baseModelWrapper" style="display:none">
+            <label for="baseModel">Select Base Model:</label>
+            <select id="baseModel" onchange="updatePreviewRange()">
+              <option disabled selected>Select Base Model</option>
+              <option>IOTIQBM_1</option>
+              <option>IOTIQBM_2</option>
+              <option>IOTIQBM_3</option>
+              <option>ACSBM</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="thingCount">No. of Things:</label>
+            <input type="number" id="thingCount" min="1" required oninput="updatePreviewRange()" />
+          </div>
+          <div id="previewRange"></div>
+          <button type="submit">🚀 Create</button>
+        </form>
+      </section>
+
+      <!-- Search Section -->
+      <section id="search" class="section">
+      <h2>🔍 Search Things</h2>
+      <form onsubmit="event.preventDefault(); searchThingsByDevice();">
+        <div class="form-group">
+          <label for="searchDeviceType">Select Device Type:</label>
+          <select id="searchDeviceType" onchange="searchThingsByDevice()">
+            <option value="">Select a Device</option>
+            <option value="Tank">Tank</option>
+            <option value="Base">Base</option>
+          </select>
+        </div>
+      </form>
+      <ul id="searchResults" class="search-results"></ul>
+      </section>
+
+      <!-- Monthly Stats -->
+      <section id="monthly" class="section">
+      <h2>📊 Monthly Thing Creation</h2>
+      <form onsubmit="event.preventDefault(); downloadMonthlyHistory();">
+        <div class="form-group">
+          <label for="monthlyDeviceType">Select Device Type:</label>
+          <select id="monthlyDeviceType">
+            <option value="">Select Device</option>
+            <option value="Tank">Tank</option>
+            <option value="Base">Base</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="monthPicker">Select Month:</label>
+          <input type="month" id="monthPicker" />
+        </div>
+
+        <button type="submit">⬇️ List Thing</button>
+      </form>
+      <ul id="monthlyResults" class="search-results"></ul>
+    </section>
+    <section id="addModel" class="section">
+    <h2>🆕 Add New Device Model</h2>
+    <form id="addModelForm" onsubmit="return addNewModel(event)">
+      <div class="form-group">
+        <label for="newDeviceType">Device Type:</label>
+        <select id="newDeviceType" required>
+          <option value="Base">Base</option>
+          <option value="Tank">Tank</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="newModelKey">Model Name (Key):</label>
+        <input type="text" id="newModelKey" required placeholder="e.g. MYMODEL_1"/>
+      </div>
+      <div class="form-group">
+        <label for="newModelPrefix">Prefix for Thing ID:</label>
+        <input type="text" id="newModelPrefix" required placeholder="e.g. myprefix1"/>
+      </div>
+      <button type="submit">➕ Add Model</button>
+    </form>
+  </section>
+
+  <!-- Device History Panel -->
+  <!-- Device History Section -->
+    <section id="history" class="section">
+    <h2>📂 Device History</h2>
+
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div class="filter-wrapper">
+        <label for="filterType">Filter:</label>
+        <select id="filterType" onchange="applyFilter()">
+          <option value="All">All</option>
+          <option value="Tank">Tank</option>
+          <option value="Base">Base</option>
+        </select>
+      </div>
+      <button onclick="deleteAllDevices()" class="danger-btn">🗑️ Delete All</button>
+    </div>
+
+    <ul id="historyList" class="search-results"></ul>
+    </section>
+    </main>
+    </div>
+
+
+  <div id="loadingOverlay" class="loading-overlay" style="display:none">🚀 Creating... Please wait</div>
+
+  <!-- JavaScript logic -->
 
   <script>
-    function navigateTo(section) {
-      document.querySelectorAll(".section").forEach(sec => sec.classList.remove("active"));
-      document.getElementById(section).classList.add("active");
+      const sidebar = document.querySelector(".sidebar");
+  const appContainer = document.querySelector(".app-container");
+  const toggleBtn = document.getElementById("sidebarToggle");
 
-      if (section === 'monthly') loadMonthlyStats();
+  toggleBtn.addEventListener("click", () => {
+    sidebar.classList.toggle("collapsed");
+    if (sidebar.classList.contains("collapsed")) {
+      appContainer.style.marginLeft = "0";
+    } else {
+      appContainer.style.marginLeft = "200px";
+    }
+  });
+    let currentUser = null;
+    window.fullDeviceList = [];
+
+    function navigateTo(sectionId) {
+      document.querySelectorAll(".section").forEach(section => section.classList.remove("active"));
+      document.getElementById(sectionId).classList.add("active");
     }
 
-    async function fetchExistingIds(prefix) {
-      const res = await fetch("/api/history");
-      const history = await res.json();
-      const ids = history.map(h => h.name).filter(id => id.startsWith(prefix));
-      return ids;
-    }
-
-    async function generateThingIds() {
-      const type = document.getElementById("deviceType").value;
-      const model = document.getElementById("baseModel").value;
-      const count = parseInt(document.getElementById("thingCount").value);
-      if (!type || !count || (type === "Base" && !model)) return;
-
-      const now = new Date();
-      const mm = String(now.getMonth() + 1).padStart(2, '0');
-      const yy = String(now.getFullYear()).slice(2);
-      const date = `${mm}${yy}`;
-      const prefix = type === "Base" ? `IOTIQBM${date}A` : `funnelbm${date}A`;
-
-      const existing = await fetchExistingIds(prefix);
-      const numbers = existing.map(id => parseInt(id.slice(-3))).filter(n => !isNaN(n));
-      const start = numbers.length ? Math.max(...numbers) + 1 : 1;
-
-      let ids = [];
-      for (let i = 0; i < count; i++) {
-        ids.push(`${prefix}${String(start + i).padStart(3, '0')}`);
+    window.addEventListener("load", async () => {
+      const savedUser = localStorage.getItem("iotUser");
+      if (savedUser) {
+        currentUser = savedUser;
+        document.getElementById("authSection").style.display = "none";
+        document.getElementById("appContainer").style.display = "block";
+        await loadDeviceHistory();
       }
+    });
 
-      document.getElementById("thingIdInput").value = count > 1 ? `${ids[0]} - ${ids[ids.length - 1]}` : ids[0];
+    function toggleAuth(mode) {
+      document.getElementById("loginForm").style.display = mode === 'login' ? 'flex' : 'none';
+      document.getElementById("registerForm").style.display = mode === 'register' ? 'flex' : 'none';
+      document.getElementById("loginTab").classList.toggle("active", mode === 'login');
+      document.getElementById("registerTab").classList.toggle("active", mode === 'register');
     }
 
-    document.getElementById("thingCount").addEventListener("input", generateThingIds);
-    document.getElementById("baseModel").addEventListener("change", generateThingIds);
+    async function handleLogin(event) {
+      event.preventDefault();
+      const username = document.getElementById("username").value;
+      const password = document.getElementById("password").value;
+      const res = await fetch("/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password })
+      });
+      if (res.ok) {
+        currentUser = username;
+        localStorage.setItem("iotUser", username);
+        document.getElementById("authSection").style.display = "none";
+        document.getElementById("appContainer").style.display = "block";
+        await loadDeviceHistory();
+      } else {
+        alert("❌ Invalid login");
+      }
+    }
+
+    async function handleRegister(event) {
+      event.preventDefault();
+      const username = document.getElementById("registerUsername").value;
+      const password = document.getElementById("registerPassword").value;
+      const res = await fetch("/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password })
+      });
+      if (res.ok) {
+        alert("✅ Registration successful. Please login.");
+      } else {
+        alert("❌ Registration failed");
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem("iotUser");
+      location.reload();
+    }
 
     function onDeviceTypeChange() {
-      const deviceType = document.getElementById("deviceType").value;
-      document.getElementById("baseModelWrapper").style.display = deviceType === "Base" ? "block" : "none";
-      generateThingIds();
+      const type = document.getElementById("deviceType").value;
+      document.getElementById("baseModelWrapper").style.display = type === "Base" ? "block" : "none";
+      document.getElementById("tankModelWrapper").style.display = type === "Tank" ? "block" : "none";
     }
 
-    function showDeviceHistory() {
-      const list = document.getElementById("deviceHistoryList");
-      list.innerHTML = "<li>Loading...</li>";
-      list.style.display = "block";
-      fetch("/history")
-        .then(res => res.json())
-        .then(data => {
-          if (!data.length) return (list.innerHTML = "<li>No Devices Yet.</li>");
-          list.innerHTML = data
-            .map(d => `<li><strong>${d.name}</strong><br/>📅 Created: ${new Date(d.createdAt).toLocaleString()}</li>`)
-            .join("");
-        });
-    }
+    async function updatePreviewRange() {
+      const type = document.getElementById("deviceType").value;
+      const count = parseInt(document.getElementById("thingCount").value);
+      const baseModel = document.getElementById("baseModel").value;
+      const tankModel = document.getElementById("tankModel").value;
 
-    async function loadMonthlyStats() {
-      const res = await fetch("/monthly-thing-count");
-      const data = await res.json();
-      document.getElementById("monthlyStats").textContent =
-        `📅 Devices created in ${data.month} ${data.year}: ${data.count}`;
-    }
-
-    async function downloadMonthlyHistory() {
-      const month = document.getElementById("monthPicker").value;
-      if (!month) return alert("Please select a month.");
-
-      const [year, m] = month.split("-");
-      const res = await fetch(`/monthly-devices?month=${m}&year=${year}`);
-      const data = await res.json();
-
-      const list = document.getElementById("monthlyResults");
-      list.innerHTML = "";
-
-      if (!data.length) {
-        list.innerHTML = "<li>No devices found for this month.</li>";
+      if (!type || !count || (type === 'Base' && !baseModel) || (type === 'Tank' && !tankModel)) {
+        document.getElementById("previewRange").textContent = "";
         return;
       }
 
-      data.forEach(d => {
-        const li = document.createElement("li");
-        li.innerHTML = `
-          <strong>${d.name}</strong><br/>
-          👤 User: ${d.userName}<br/>
-          🆔 Device ID: ${d.deviceId}<br/>
-          📅 Created: ${d.createdAt}<br/>
-          📦 <a href="/certs/${d.name}.zip" download>Download ZIP</a>`;
-        list.appendChild(li);
+      const res = await fetch("/api/next-range", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, baseModel, tankModel, count })
       });
 
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `iot-history-${month}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const data = await res.json();
+      document.getElementById("previewRange").textContent = `🆕 Will create: ${data.range}`;
     }
 
-    // ✅ Create form submission
-    document.getElementById("createForm").addEventListener("submit", async function (e) {
+    document.getElementById("createForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const thingIdStr = document.getElementById("thingIdInput").value.trim();
-      if (!thingIdStr) return alert("Thing ID is missing.");
-      
-      const thingNames = thingIdStr.includes(" - ")
-        ? expandRange(thingIdStr)
-        : [thingIdStr];
+      const type = document.getElementById("deviceType").value;
+      const baseModel = document.getElementById("baseModel").value;
+      const tankModel = document.getElementById("tankModel").value;
+      const count = parseInt(document.getElementById("thingCount").value);
+      const user = localStorage.getItem("iotUser");
+
+      if (!type || !count || (type === "Base" && !baseModel) || (type === "Tank" && !tankModel)) {
+        alert("❌ Please complete all fields.");
+        return;
+      }
+
+      document.getElementById("loadingOverlay").style.display = "flex";
 
       const res = await fetch("/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ thingNames }),
+        body: JSON.stringify({ type, baseModel, tankModel, count, user })
       });
 
-      const html = await res.text();
-      document.getElementById("create").innerHTML = html;
+      const msg = await res.text();
+      document.getElementById("loadingOverlay").style.display = "none";
+      alert(msg);
+      await loadDeviceHistory();
     });
 
-    // Helper to expand "prefixA001 - prefixA005" into array
-    function expandRange(rangeStr) {
-      const [start, end] = rangeStr.split(" - ");
-      const prefix = start.slice(0, -3);
-      const startNum = parseInt(start.slice(-3));
-      const endNum = parseInt(end.slice(-3));
-      const ids = [];
-      for (let i = startNum; i <= endNum; i++) {
-        ids.push(`${prefix}${String(i).padStart(3, "0")}`);
+    async function loadDeviceHistory() {
+      const res = await fetch("/api/history");
+      const data = await res.json();
+      window.fullDeviceList = data;
+      const historyList = document.getElementById("historyList");
+      historyList.innerHTML = "";
+      data.slice().reverse().forEach(d => {
+        const deviceType = d.name.startsWith("funnelbm") ? "Tank" : "Base";
+        const li = document.createElement("li");
+        li.setAttribute("data-type", deviceType);
+        li.innerHTML = `
+          <strong>${d.name}</strong><br/>
+          <div class="metadata">
+            👤 User: ${d.user || 'N/A'}<br/>
+            🔐 Policy: ${d.policy || 'Unknown'}<br/>
+            📶 Status: ${d.status || 'Unknown'}<br/>
+            📜 Certificate: ${d.certificateStatus || 'Unknown'}<br/>
+            📅 Created: ${new Date(d.createdAt).toLocaleString()}<br/>
+            <a href="/certs/${d.name}.h" download>📄 Download</a>
+            <button class="delete-btn" onclick="deleteDevice('${d.name}')">🗑️ Delete</button>
+          </div>`;
+        historyList.appendChild(li);
+      });
+    }
+
+    async function deleteDevice(name) {
+      if (!confirm(`Delete ${name}?`)) return;
+      const res = await fetch('/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ thingName: name })
+      });
+      const msg = await res.text();
+      alert(msg);
+      await loadDeviceHistory();
+    }
+
+    async function deleteAllDevices() {
+      if (!confirm("❗ Are you sure you want to delete ALL devices?")) return;
+      const res = await fetch('/delete-all', { method: 'POST' });
+      const msg = await res.text();
+      alert(msg);
+      await loadDeviceHistory();
+    }
+
+    function toggleDeviceHistory() {
+      const panel = document.getElementById("deviceHistoryPanel");
+      panel.classList.toggle("hidden");
+    }
+
+    function applyFilter() {
+      const type = document.getElementById("filterType").value;
+      document.querySelectorAll('#historyList li').forEach(item => {
+        item.style.display = type === 'All' || item.getAttribute('data-type') === type ? 'block' : 'none';
+      });
+    }
+
+    function searchThingsByDevice() {
+      const type = document.getElementById("searchDeviceType").value;
+      const results = document.getElementById("searchResults");
+      results.innerHTML = "";
+      if (!window.fullDeviceList || !type) return;
+      const filtered = window.fullDeviceList.filter(d => {
+        return (type === 'Tank' && d.name.startsWith('funnelbm')) ||
+               (type === 'Base' && !d.name.startsWith('funnelbm'));
+      });
+      if (filtered.length === 0) {
+        results.innerHTML = "<li>No matching Things found.</li>";
+        return;
       }
-      return ids;
+      filtered.forEach(d => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <strong>${d.name}</strong>
+          <div class="metadata">
+            👤 User: ${d.user || 'N/A'}<br/>
+            🔐 Policy: ${d.policy || 'Unknown'}<br/>
+            📶 Status: ${d.status || 'Unknown'}<br/>
+            📜 Certificate: ${d.certificateStatus || 'Unknown'}<br/>
+            📅 Created: ${new Date(d.createdAt).toLocaleString()}<br/>
+            <a href="/certs/${d.name}.h" download>📄 Download</a>
+          </div>`;
+        results.appendChild(li);
+      });
+    }
+    async function addNewModel(event) {
+  event.preventDefault();
+  const type = document.getElementById("newDeviceType").value;
+  const modelKey = document.getElementById("newModelKey").value;
+  const modelPrefix = document.getElementById("newModelPrefix").value;
+
+  const res = await fetch("/api/add-model", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type, modelKey, modelPrefix })
+  });
+
+  if (res.ok) {
+    alert("✅ Model added successfully");
+    await loadModels();
+    document.getElementById("addModelForm").reset();
+  } else {
+    alert("❌ Failed to add model");
+  }
+}
+
+async function loadModels() {
+  const res = await fetch("/api/get-models");
+  const models = await res.json();
+  const tankModelSelect = document.getElementById("tankModel");
+  const baseModelSelect = document.getElementById("baseModel");
+
+  if (tankModelSelect && baseModelSelect) {
+    tankModelSelect.innerHTML = '<option disabled selected>Select Tank Model</option>';
+    baseModelSelect.innerHTML = '<option disabled selected>Select Base Model</option>';
+
+    for (const [model, _] of Object.entries(models.Tank || {})) {
+      const option = document.createElement("option");
+      option.value = model;
+      option.textContent = model;
+      tankModelSelect.appendChild(option);
+    }
+    for (const [model, _] of Object.entries(models.Base || {})) {
+      const option = document.createElement("option");
+      option.value = model;
+      option.textContent = model;
+      baseModelSelect.appendChild(option);
+    }
+  }
+}
+
+window.addEventListener("DOMContentLoaded", loadModels);
+    function downloadMonthlyHistory() {
+      const month = document.getElementById("monthPicker").value;
+      const type = document.getElementById("monthlyDeviceType").value;
+      const results = document.getElementById("monthlyResults");
+      results.innerHTML = '';
+      if (!window.fullDeviceList || !month || !type) return;
+      const [year, selectedMonth] = month.split("-");
+      const filtered = window.fullDeviceList.filter(d => {
+        const date = new Date(d.createdAt);
+        const isTypeMatch = (type === 'Tank' && d.name.startsWith('funnelbm')) ||
+                            (type === 'Base' && !d.name.startsWith('funnelbm'));
+        return isTypeMatch &&
+               date.getFullYear() === parseInt(year) &&
+               date.getMonth() + 1 === parseInt(selectedMonth);
+      });
+      if (filtered.length === 0) {
+        results.innerHTML = '<li>No matching devices for this month.</li>';
+        return;
+      }
+      filtered.forEach(d => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <strong>${d.name}</strong><br/>
+          <div class="metadata">
+            👤 User: ${d.user || 'N/A'}<br/>
+            🔐 Policy: ${d.policy || 'Unknown'}<br/>
+            📶 Status: ${d.status || 'Unknown'}<br/>
+            📜 Certificate: ${d.certificateStatus || 'Unknown'}<br/>
+            📅 Created: ${new Date(d.createdAt).toLocaleString()}<br/>
+            <a href="/certs/${d.name}.h" download>📄 Download</a>
+          </div>`;
+        results.appendChild(li);
+      });
     }
   </script>
 </body>
