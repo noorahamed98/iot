@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>IOTIQ | Device Manager</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="icon" href="favicon.png" type="image/png" />
   <style>
     .loading-overlay {
       position: fixed;
@@ -17,7 +19,7 @@
       position: absolute;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      background: #000000dd;
+      background: #000000;
       display: flex; justify-content: center; align-items: center;
       z-index: 99999;
       flex-direction: column;
@@ -26,11 +28,12 @@
       display: flex;
       gap: 10px;
       margin-bottom: 20px;
+      
     }
     .auth-tabs button {
       flex: 1;
       padding: 10px;
-      background: #0b234b;
+      background: #02241c;
       color: white;
       border: none;
       border-radius: 5px;
@@ -38,21 +41,21 @@
       cursor: pointer;
     }
     .auth-tabs button.active {
-      background: #021024;
+      background: #011511;
     }
     .auth-form {
       background: white;
       padding: 30px;
       border-radius: 10px;
       width: 300px;
-      display: flex; flex-direction: column; gap: 15px;
+      display: flex;  gap: 15px;
     }
     .auth-form input, .auth-form button {
       padding: 10px;
       font-size: 16px;
     }
     .auth-form button {
-      background: #0b234b;
+      background: #02241c;
       color: white;
       font-weight: bold;
       border: none;
@@ -103,8 +106,10 @@
   <img src="logo.png" class="logo" alt="Logo" />
   <div class="profile-section">
     <img src="profile.png" alt="Profile" />
-    <div class="profile-dropdown">
-      <button onclick="logout()">Logout</button>
+    <div class="profile-dropdown" id="profileDropdown">
+      <div class="username-display" id="loggedInUsername">👤 user</div>
+      <hr />
+      <button onclick="logout()"><i class="fas fa-arrow-right-from-bracket"></i> Logout</button>
     </div>
   </div>
 </div>
@@ -115,6 +120,7 @@
   <button onclick="navigateTo('search')">🔍 Search Things</button>
   <button onclick="navigateTo('monthly')">📊 Monthly Stats</button>
   <button onclick="navigateTo('history')">📂 Device History</button>
+  <button onclick="navigateTo('addModel')">⚙️ Add Device</button>
 </div>
 
   <!-- Main App -->
@@ -122,8 +128,8 @@
     <main class="main-content">
 
       <!-- Create Section -->
-      <section id="create" class="section active">
-        <h1>➕ Create New Thing</h1>
+      <section id="create" class="section active" >
+        <h1>Create New Thing</h1>
         <form id="createForm">
           <div class="form-group">
             <label for="deviceType">Select Device:</label>
@@ -138,9 +144,9 @@
             <label for="tankModel">Select Tank Model:</label>
             <select id="tankModel" onchange="updatePreviewRange()">
               <option disabled selected>Select Tank Model</option>
-              <option>FUNNELBM_1</option>
-              <option>FUNNELBM_2</option>
-              <option>FUNNELBM_3</option>
+              <option>FUNNELTM_1</option>
+              <option>FUNNELTM_2</option>
+              <option>FUNNELTM_3</option>
             </select>
           </div>
 
@@ -148,10 +154,9 @@
             <label for="baseModel">Select Base Model:</label>
             <select id="baseModel" onchange="updatePreviewRange()">
               <option disabled selected>Select Base Model</option>
-              <option>IOTIQBM_1</option>
-              <option>IOTIQBM_2</option>
-              <option>IOTIQBM_3</option>
-              <option>ACSBM</option>
+              <option>FUNNELBM_1</option>
+              <option>FUNNELBM_2</option>
+              <option>FUNNELBM_3</option>
             </select>
           </div>
 
@@ -166,7 +171,7 @@
 
       <!-- Search Section -->
       <section id="search" class="section">
-      <h2>🔍 Search Things</h2>
+      <h2>Search Things</h2>
       <form onsubmit="event.preventDefault(); searchThingsByDevice();">
         <div class="form-group">
           <label for="searchDeviceType">Select Device Type:</label>
@@ -182,7 +187,7 @@
 
       <!-- Monthly Stats -->
       <section id="monthly" class="section">
-      <h2>📊 Monthly Thing Creation</h2>
+      <h2>Monthly Thing Creation</h2>
       <form onsubmit="event.preventDefault(); downloadMonthlyHistory();">
         <div class="form-group">
           <label for="monthlyDeviceType">Select Device Type:</label>
@@ -207,9 +212,9 @@
   <!-- Device History Panel -->
   <!-- Device History Section -->
     <section id="history" class="section">
-    <h2>📂 Device History</h2>
+    <h2>Device History</h2>
 
-    <div style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
       <div class="filter-wrapper">
         <label for="filterType">Filter:</label>
         <select id="filterType" onchange="applyFilter()">
@@ -217,12 +222,29 @@
           <option value="Tank">Tank</option>
           <option value="Base">Base</option>
         </select>
-      </div>
+      
       <button onclick="deleteAllDevices()" class="danger-btn">🗑️ Delete All</button>
+      </div>
     </div>
 
     <ul id="historyList" class="search-results"></ul>
     </section>
+
+    <section id="addModel" class="section">
+        <h2>Add New Device Model</h2>
+    <form id="addModelForm" onsubmit="return addNewModel(event)">
+      <div class="form-group">
+        <label for="newDeviceType">Device Type:</label>
+        <input type="text" id="newDeviceType" placeholder="Enter Device Type" required />
+      </div>
+      <div class="form-group">
+        <label for="newModelKey">Model Name (Key):</label>
+        <input type="text" id="newModelKey" placeholder="Model Name" required />
+      </div>
+      <button type="submit">➕ Add Model</button>
+    </form>
+    </section>
+
     </main>
     </div>
 
@@ -241,7 +263,7 @@
     if (sidebar.classList.contains("collapsed")) {
       appContainer.style.marginLeft = "0";
     } else {
-      appContainer.style.marginLeft = "200px";
+      appContainer.style.marginLeft = "230px";
     }
   });
     let currentUser = null;
@@ -258,6 +280,7 @@
         currentUser = savedUser;
         document.getElementById("authSection").style.display = "none";
         document.getElementById("appContainer").style.display = "block";
+        document.getElementById("loggedInUsername").textContent = `👤 ${savedUser}`;
         await loadDeviceHistory();
       }
     });
@@ -283,7 +306,9 @@
         localStorage.setItem("iotUser", username);
         document.getElementById("authSection").style.display = "none";
         document.getElementById("appContainer").style.display = "block";
+        document.getElementById("loggedInUsername").textContent = `👤 ${username}`;
         await loadDeviceHistory();
+        
       } else {
         alert("❌ Invalid login");
       }
@@ -414,6 +439,8 @@
       panel.classList.toggle("hidden");
     }
 
+    
+
     function applyFilter() {
       const type = document.getElementById("filterType").value;
       document.querySelectorAll('#historyList li').forEach(item => {
@@ -484,6 +511,53 @@
         results.appendChild(li);
       });
     }
+
+  async function addNewModel(event) {
+  event.preventDefault();
+  const type = document.getElementById("newDeviceType").value.trim();
+  const modelKey = document.getElementById("newModelKey").value.trim();
+
+  const res = await fetch("/api/add-model", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type, modelKey})
+  });
+
+  if (res.ok) {
+    alert("✅ Model added successfully");
+    await loadModels();
+    document.getElementById("addModelForm").reset();
+  } else {
+    alert("❌ Failed to add model");
+  }
+}
+
+async function loadModels() {
+  const res = await fetch("/api/get-models");
+  const models = await res.json();
+  const tankModelSelect = document.getElementById("tankModel");
+  const baseModelSelect = document.getElementById("baseModel");
+
+  if (tankModelSelect && baseModelSelect) {
+    tankModelSelect.innerHTML = '<option disabled selected>Select Tank Model</option>';
+    baseModelSelect.innerHTML = '<option disabled selected>Select Base Model</option>';
+
+    for (const [model, _] of Object.entries(models.Tank || {})) {
+      const option = document.createElement("option");
+      option.value = model;
+      option.textContent = model;
+      tankModelSelect.appendChild(option);
+    }
+    for (const [model, _] of Object.entries(models.Base || {})) {
+      const option = document.createElement("option");
+      option.value = model;
+      option.textContent = model;
+      baseModelSelect.appendChild(option);
+    }
+  }
+}
+
+window.addEventListener("DOMContentLoaded", loadModels);
   </script>
 </body>
 </html>
